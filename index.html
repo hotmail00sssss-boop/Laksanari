@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Message Sender</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap');
+    
+    * {
+      font-family: 'Prompt', sans-serif;
+    }
+    
+    .image-preview {
+      transition: all 0.3s ease;
+    }
+    
+    .message-card {
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .message-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(168, 85, 247, 0.15);
+    }
+    
+    .upload-area {
+      transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover {
+      border-color: #c084fc;
+      background-color: rgba(192, 132, 252, 0.05);
+    }
+    
+    input[type="file"] {
+      display: none;
+    }
+    
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full">
+  <div id="app" class="w-full h-full overflow-auto">
+   <div class="min-h-full" style="background: linear-gradient(135deg, #fce7f3 0%, #f3e8ff 50%, #ddd6fe 100%);">
+    <div class="max-w-6xl mx-auto px-4 py-8"><!-- Header -->
+     <div class="text-center mb-8">
+      <h1 id="app-title" class="font-bold mb-2" style="color: #7c3aed;">Photo Message</h1>
+      <p id="app-subtitle" class="text-purple-600">ส่งรูปภาพพร้อมข้อความถึงคนพิเศษ</p>
+     </div><!-- Form Section -->
+     <div class="bg-white rounded-3xl shadow-lg p-8 mb-8" style="border: 2px solid #f0abfc;">
+      <h2 class="font-semibold mb-6" style="color: #a855f7;">สร้างข้อความใหม่</h2><!-- Image Upload Area -->
+      <div class="mb-6"><label for="image-upload" class="block font-medium mb-2" style="color: #7c3aed;">เลือกรูปภาพ</label>
+       <div id="upload-area" class="upload-area border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer" style="border-color: #e9d5ff;"><input type="file" id="image-upload" accept="image/*" aria-label="เลือกรูปภาพ">
+        <div id="upload-placeholder">
+         <svg class="mx-auto mb-4" width="64" height="64" viewbox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="32" fill="#f3e8ff" /> <path d="M32 20v24M20 32h24" stroke="#a855f7" stroke-width="3" stroke-linecap="round" />
+         </svg>
+         <p class="font-medium mb-1" style="color: #a855f7;">คลิกเพื่อเลือกรูปภาพ</p>
+         <p class="text-sm text-purple-400">รองรับไฟล์ JPG, PNG, GIF</p>
+        </div>
+        <div id="image-preview" class="hidden"><img id="preview-img" src="" alt="ตัวอย่างรูปภาพ" class="max-w-full h-auto mx-auto rounded-xl" style="max-height: 300px;"> <button id="remove-image" class="mt-4 px-4 py-2 rounded-full text-sm font-medium" style="background-color: #fbcfe8; color: #be185d;">ลบรูปภาพ</button>
+        </div>
+       </div>
+      </div><!-- Caption -->
+      <div class="mb-6"><label for="caption" class="block font-medium mb-2" style="color: #7c3aed;">คำบรรยาย</label> <textarea id="caption" rows="4" class="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:border-purple-400 transition-colors" style="border-color: #e9d5ff;" placeholder="เขียนข้อความของคุณที่นี่..."></textarea>
+      </div><!-- Recipient Email -->
+      <div class="mb-6"><label for="recipient-email" class="block font-medium mb-2" style="color: #7c3aed;">อีเมลผู้รับ</label> <input type="email" id="recipient-email" class="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:border-purple-400 transition-colors" style="border-color: #e9d5ff;" placeholder="example@email.com">
+      </div><!-- Schedule Options -->
+      <div class="mb-6"><label class="block font-medium mb-2" style="color: #7c3aed;">กำหนดเวลาส่ง (ไม่บังคับ)</label>
+       <div class="grid grid-cols-2 gap-4">
+        <div><label for="schedule-date" class="block text-sm mb-2 text-purple-600">วันที่</label> <input type="date" id="schedule-date" class="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:border-purple-400 transition-colors" style="border-color: #e9d5ff;">
+        </div>
+        <div><label for="schedule-time" class="block text-sm mb-2 text-purple-600">เวลา</label> <input type="time" id="schedule-time" class="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:border-purple-400 transition-colors" style="border-color: #e9d5ff;">
+        </div>
+       </div>
+      </div><!-- Buttons -->
+      <div class="flex gap-4"><button id="send-now-btn" class="flex-1 py-3 px-6 rounded-xl font-medium text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" style="background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);"> <span id="send-button-text">ส่งทันที</span> </button> <button id="schedule-btn" class="flex-1 py-3 px-6 rounded-xl font-medium transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" style="background-color: #fbcfe8; color: #be185d;"> <span id="schedule-button-text">กำหนดเวลาส่ง</span> </button>
+      </div>
+     </div><!-- Messages List -->
+     <div>
+      <h2 class="font-semibold mb-4" style="color: #a855f7;">ข้อความที่ส่ง</h2>
+      <div id="messages-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+       <div class="text-center py-12 col-span-full">
+        <p class="text-purple-400">ยังไม่มีข้อความที่ส่ง</p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      background_color: "#fce7f3",
+      surface_color: "#ffffff",
+      text_color: "#7c3aed",
+      primary_action_color: "#a855f7",
+      secondary_action_color: "#fbcfe8",
+      app_title: "Photo Message",
+      app_subtitle: "ส่งรูปภาพพร้อมข้อความถึงคนพิเศษ",
+      send_button_text: "ส่งทันที",
+      schedule_button_text: "กำหนดเวลาส่ง",
+      font_family: "Prompt",
+      font_size: 16
+    };
+
+    let currentImageData = null;
+    let allMessages = [];
+
+    const dataHandler = {
+      onDataChanged(data) {
+        allMessages = data;
+        renderMessages(data);
+      }
+    };
+
+    async function initializeApp() {
+      if (window.dataSdk) {
+        const initResult = await window.dataSdk.init(dataHandler);
+        if (!initResult.isOk) {
+          showToast('ไม่สามารถเริ่มต้นระบบได้', 'error');
+        }
+      }
+
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange: async (config) => {
+            const customFont = config.font_family || defaultConfig.font_family;
+            const baseFontStack = 'sans-serif';
+            const baseSize = config.font_size || defaultConfig.font_size;
+            
+            document.body.style.fontFamily = `${customFont}, ${baseFontStack}`;
+            document.getElementById('app').style.background = `linear-gradient(135deg, ${config.background_color || defaultConfig.background_color} 0%, #f3e8ff 50%, #ddd6fe 100%)`;
+            
+            const appTitle = document.getElementById('app-title');
+            appTitle.textContent = config.app_title || defaultConfig.app_title;
+            appTitle.style.color = config.text_color || defaultConfig.text_color;
+            appTitle.style.fontSize = `${baseSize * 2}px`;
+            
+            const appSubtitle = document.getElementById('app-subtitle');
+            appSubtitle.textContent = config.app_subtitle || defaultConfig.app_subtitle;
+            appSubtitle.style.fontSize = `${baseSize}px`;
+            
+            document.getElementById('send-button-text').textContent = config.send_button_text || defaultConfig.send_button_text;
+            document.getElementById('schedule-button-text').textContent = config.schedule_button_text || defaultConfig.schedule_button_text;
+            
+            document.getElementById('send-now-btn').style.background = `linear-gradient(135deg, ${config.primary_action_color || defaultConfig.primary_action_color} 0%, #ec4899 100%)`;
+            document.getElementById('schedule-btn').style.backgroundColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            const allText = document.querySelectorAll('p, label, button, h2, h3');
+            allText.forEach(el => {
+              if (el.id === 'app-title') return;
+              el.style.fontSize = `${baseSize}px`;
+            });
+            
+            const headers = document.querySelectorAll('h2');
+            headers.forEach(h => {
+              if (h.id !== 'app-title') {
+                h.style.fontSize = `${baseSize * 1.5}px`;
+              }
+            });
+          },
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () => config.background_color || defaultConfig.background_color,
+                set: (value) => {
+                  config.background_color = value;
+                  window.elementSdk.setConfig({ background_color: value });
+                }
+              },
+              {
+                get: () => config.surface_color || defaultConfig.surface_color,
+                set: (value) => {
+                  config.surface_color = value;
+                  window.elementSdk.setConfig({ surface_color: value });
+                }
+              },
+              {
+                get: () => config.text_color || defaultConfig.text_color,
+                set: (value) => {
+                  config.text_color = value;
+                  window.elementSdk.setConfig({ text_color: value });
+                }
+              },
+              {
+                get: () => config.primary_action_color || defaultConfig.primary_action_color,
+                set: (value) => {
+                  config.primary_action_color = value;
+                  window.elementSdk.setConfig({ primary_action_color: value });
+                }
+              },
+              {
+                get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+                set: (value) => {
+                  config.secondary_action_color = value;
+                  window.elementSdk.setConfig({ secondary_action_color: value });
+                }
+              }
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || defaultConfig.font_family,
+              set: (value) => {
+                config.font_family = value;
+                window.elementSdk.setConfig({ font_family: value });
+              }
+            },
+            fontSizeable: {
+              get: () => config.font_size || defaultConfig.font_size,
+              set: (value) => {
+                config.font_size = value;
+                window.elementSdk.setConfig({ font_size: value });
+              }
+            }
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ["app_title", config.app_title || defaultConfig.app_title],
+            ["app_subtitle", config.app_subtitle || defaultConfig.app_subtitle],
+            ["send_button_text", config.send_button_text || defaultConfig.send_button_text],
+            ["schedule_button_text", config.schedule_button_text || defaultConfig.schedule_button_text]
+          ])
+        });
+      }
+
+      setupEventListeners();
+    }
+
+    function setupEventListeners() {
+      const imageUpload = document.getElementById('image-upload');
+      const uploadArea = document.getElementById('upload-area');
+      const removeImageBtn = document.getElementById('remove-image');
+      const sendNowBtn = document.getElementById('send-now-btn');
+      const scheduleBtn = document.getElementById('schedule-btn');
+
+      uploadArea.addEventListener('click', () => {
+        if (!currentImageData) {
+          imageUpload.click();
+        }
+      });
+
+      imageUpload.addEventListener('change', handleImageUpload);
+      removeImageBtn.addEventListener('click', removeImage);
+      sendNowBtn.addEventListener('click', () => handleSend(false));
+      scheduleBtn.addEventListener('click', () => handleSend(true));
+    }
+
+    function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentImageData = event.target.result;
+          document.getElementById('preview-img').src = currentImageData;
+          document.getElementById('upload-placeholder').classList.add('hidden');
+          document.getElementById('image-preview').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function removeImage(e) {
+      e.stopPropagation();
+      currentImageData = null;
+      document.getElementById('image-upload').value = '';
+      document.getElementById('upload-placeholder').classList.remove('hidden');
+      document.getElementById('image-preview').classList.add('hidden');
+    }
+
+    async function handleSend(isScheduled) {
+      const caption = document.getElementById('caption').value.trim();
+      const recipientEmail = document.getElementById('recipient-email').value.trim();
+      const scheduleDate = document.getElementById('schedule-date').value;
+      const scheduleTime = document.getElementById('schedule-time').value;
+
+      if (!currentImageData) {
+        showToast('กรุณาเลือกรูปภาพ', 'error');
+        return;
+      }
+
+      if (!caption) {
+        showToast('กรุณาใส่คำบรรยาย', 'error');
+        return;
+      }
+
+      if (!recipientEmail || !validateEmail(recipientEmail)) {
+        showToast('กรุณาใส่อีเมลผู้รับที่ถูกต้อง', 'error');
+        return;
+      }
+
+      if (isScheduled && (!scheduleDate || !scheduleTime)) {
+        showToast('กรุณาเลือกวันและเวลาที่ต้องการส่ง', 'error');
+        return;
+      }
+
+      if (allMessages.length >= 999) {
+        showToast('ถึงขีดจำกัด 999 ข้อความแล้ว กรุณาลบข้อความเก่าก่อน', 'error');
+        return;
+      }
+
+      const sendBtn = isScheduled ? document.getElementById('schedule-btn') : document.getElementById('send-now-btn');
+      sendBtn.disabled = true;
+      sendBtn.style.opacity = '0.5';
+
+      const messageData = {
+        id: Date.now().toString(),
+        image_data: currentImageData,
+        caption: caption,
+        recipient_email: recipientEmail,
+        scheduled_date: scheduleDate || '',
+        scheduled_time: scheduleTime || '',
+        created_at: new Date().toISOString(),
+        status: isScheduled ? 'scheduled' : 'sent'
+      };
+
+      if (window.dataSdk) {
+        const result = await window.dataSdk.create(messageData);
+        
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+
+        if (result.isOk) {
+          showToast(isScheduled ? 'กำหนดเวลาส่งสำเร็จ!' : 'ส่งข้อความสำเร็จ!', 'success');
+          resetForm();
+        } else {
+          showToast('เกิดข้อผิดพลาด กรุณาลองอีกครั้ง', 'error');
+        }
+      }
+    }
+
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function resetForm() {
+      document.getElementById('caption').value = '';
+      document.getElementById('recipient-email').value = '';
+      document.getElementById('schedule-date').value = '';
+      document.getElementById('schedule-time').value = '';
+      removeImage({ stopPropagation: () => {} });
+    }
+
+    function renderMessages(messages) {
+      const messagesList = document.getElementById('messages-list');
+      
+      if (messages.length === 0) {
+        messagesList.innerHTML = '<div class="text-center py-12 col-span-full"><p class="text-purple-400">ยังไม่มีข้อความที่ส่ง</p></div>';
+        return;
+      }
+
+      messagesList.innerHTML = messages.map(msg => `
+        <div class="message-card bg-white rounded-2xl overflow-hidden shadow" style="border: 2px solid #f0abfc;" data-id="${msg.id}">
+          <img src="${msg.image_data}" alt="${msg.caption}" class="w-full h-48 object-cover">
+          <div class="p-4">
+            <p class="font-medium mb-2 line-clamp-2" style="color: #7c3aed;">${msg.caption}</p>
+            <p class="text-sm text-purple-400 mb-2">ถึง: ${msg.recipient_email}</p>
+            ${msg.status === 'scheduled' ? `
+              <p class="text-xs text-pink-400">กำหนดส่ง: ${formatDate(msg.scheduled_date)} ${msg.scheduled_time}</p>
+            ` : `
+              <p class="text-xs text-pink-400">ส่งแล้ว: ${formatDate(msg.created_at)}</p>
+            `}
+            <button class="delete-btn mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors" style="background-color: #fce7f3; color: #be185d;" data-id="${msg.id}">ลบ</button>
+          </div>
+        </div>
+      `).join('');
+
+      messagesList.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => handleDelete(btn.dataset.id));
+      });
+    }
+
+    async function handleDelete(id) {
+      const message = allMessages.find(msg => msg.id === id);
+      if (!message) return;
+
+      const deleteBtn = document.querySelector(`button[data-id="${id}"]`);
+      deleteBtn.disabled = true;
+      deleteBtn.style.opacity = '0.5';
+
+      if (window.dataSdk) {
+        const result = await window.dataSdk.delete(message);
+        
+        deleteBtn.disabled = false;
+        deleteBtn.style.opacity = '1';
+
+        if (result.isOk) {
+          showToast('ลบข้อความสำเร็จ', 'success');
+        } else {
+          showToast('ไม่สามารถลบข้อความได้', 'error');
+        }
+      }
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.style.backgroundColor = type === 'success' ? '#d1fae5' : '#fecaca';
+      toast.style.color = type === 'success' ? '#065f46' : '#991b1b';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    initializeApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b7c4a65363c3bdd',t:'MTc2NzM3ODIzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
